@@ -1,7 +1,9 @@
 <?php
 
 return [
-    'adminEmail' => 'admin@example.com',
-    'senderEmail' => 'noreply@example.com',
-    'senderName' => 'Example.com mailer',
+    'domain' => 'subdomain.amocrm.ru',
+    'subdomain' => 'subdomain',
+    'clientId' => 'ID',
+    'clientSecret' => 'Secret',
+    'redirectUri' => 'redirectUri',
 ];

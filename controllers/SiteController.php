@@ -2,14 +2,19 @@
 
 namespace app\controllers;
 
+use AmoCRM\OAuth2\Client\Provider\AmoCRM;
+use app\components\helpers\TokenHelper;
+use Exception;
+use Throwable;
 use Yii;
 use yii\filters\AccessControl;
 use yii\web\Controller;
-use yii\web\Response;
 use yii\filters\VerbFilter;
-use app\models\LoginForm;
-use app\models\ContactForm;
 
+/**
+ * Class SiteController
+ * @package app\controllers
+ */
 class SiteController extends Controller
 {
     /**
@@ -20,17 +25,17 @@ class SiteController extends Controller
         return [
             'access' => [
                 'class' => AccessControl::className(),
-                'only' => ['logout'],
+                'only'  => ['logout'],
                 'rules' => [
                     [
                         'actions' => ['logout'],
-                        'allow' => true,
-                        'roles' => ['@'],
+                        'allow'   => true,
+                        'roles'   => ['@'],
                     ],
                 ],
             ],
-            'verbs' => [
-                'class' => VerbFilter::className(),
+            'verbs'  => [
+                'class'   => VerbFilter::className(),
                 'actions' => [
                     'logout' => ['post'],
                 ],
@@ -39,90 +44,50 @@ class SiteController extends Controller
     }
 
     /**
-     * {@inheritdoc}
-     */
-    public function actions()
-    {
-        return [
-            'error' => [
-                'class' => 'yii\web\ErrorAction',
-            ],
-            'captcha' => [
-                'class' => 'yii\captcha\CaptchaAction',
-                'fixedVerifyCode' => YII_ENV_TEST ? 'testme' : null,
-            ],
-        ];
-    }
-
-    /**
-     * Displays homepage.
-     *
-     * @return string
+     * @throws \Exception
      */
     public function actionIndex()
     {
-        return $this->render('index');
-    }
-
-    /**
-     * Login action.
-     *
-     * @return Response|string
-     */
-    public function actionLogin()
-    {
-        if (!Yii::$app->user->isGuest) {
-            return $this->goHome();
-        }
-
-        $model = new LoginForm();
-        if ($model->load(Yii::$app->request->post()) && $model->login()) {
-            return $this->goBack();
-        }
-
-        $model->password = '';
-        return $this->render('login', [
-            'model' => $model,
+        $config = Yii::$app->params;
+        $provider = new AmoCRM([
+            'clientId'     => $config['clientId'],
+            'clientSecret' => $config['clientSecret'],
+            'redirectUri'  => $config['redirectUri'],
         ]);
-    }
-
-    /**
-     * Logout action.
-     *
-     * @return Response
-     */
-    public function actionLogout()
-    {
-        Yii::$app->user->logout();
-
-        return $this->goHome();
-    }
-
-    /**
-     * Displays contact page.
-     *
-     * @return Response|string
-     */
-    public function actionContact()
-    {
-        $model = new ContactForm();
-        if ($model->load(Yii::$app->request->post()) && $model->contact(Yii::$app->params['adminEmail'])) {
-            Yii::$app->session->setFlash('contactFormSubmitted');
-
-            return $this->refresh();
+        $session = Yii::$app->session;
+        $session->open();
+        if ($session->get('access_token')) {
+            return $this->render('index');
         }
-        return $this->render('contact', [
-            'model' => $model,
-        ]);
+        $session->set('oauth2state', bin2hex(random_bytes(16)));
+        return $this->render('login', compact('provider'));
     }
 
     /**
-     * Displays about page.
-     *
+     * @return \yii\web\Response
+     */
+    public function actionCode()
+    {
+        try {
+            $code = Yii::$app->request->get('code');
+            if (!$code) {
+                throw new Exception('Код не передан');
+            }
+            TokenHelper::getAccessToken($code, true);
+
+            return $this->goBack('/');
+        } catch (Throwable $exception) {
+            die($exception->getMessage());
+        }
+    }
+
+    /**
      * @return string
      */
-    public function actionAbout()
+    public function actionDestroy()
     {
-        return $this->render('about');
+        Yii::$app->session->open();
+        Yii::$app->session->destroy();
+        return $this->redirect('/');
     }
 }
