@@ -70,8 +70,11 @@ class CompanyController extends Controller
         $companiesArray = $companiesCollection->toArray();
         foreach ($companiesArray as $companyKey => $company) {
             $companiesArray[$companyKey]['responsible_user'] = ($users->getBy('id', $company['responsible_user_id']))->getName();
-            if ($company['responsible_user_id'] === $company['created_by']) {
-                $companiesArray[$companyKey]['created_by'] = $companiesArray[$companyKey]['responsible_user'];
+            $responsibleUser = $users->getBy('id', $company['created_by']);
+            if ($company['created_by'] === 0) {
+                $companiesArray[$companyKey]['created_by'] = 'Robot';
+            } elseif (!$responsibleUser) {
+                $companiesArray[$companyKey]['created_by'] = 'Remote user';
             } else {
                 $companiesArray[$companyKey]['created_by'] = ($users->getBy('id', $company['created_by']))->getName();
             }
@@ -94,6 +97,9 @@ class CompanyController extends Controller
                     $company = new CompanyModel();
                     $companyNumber = $i * self::COMPANY_COUNT + $j;
                     $company->setName('Company ' . $companyNumber);
+                    if (rand(0,100) % 2 === 0) {
+                        $company->setCreatedBy(0);
+                    }
                     $companiesCollection->add($company);
                 }
                 $companies->add($companiesCollection);

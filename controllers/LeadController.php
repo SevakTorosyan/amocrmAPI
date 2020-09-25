@@ -71,8 +71,12 @@ class LeadController extends Controller
         $leadsCollectionArray = $leadCollection->toArray();
         foreach ($leadsCollectionArray as $leadKey => $lead) {
             $leadsCollectionArray[$leadKey]['responsible_user'] = ($users->getBy('id', $lead['responsible_user_id']))->getName();
-            if ($lead['responsible_user_id'] === $lead['created_by']) {
-                $leadsCollectionArray[$leadKey]['created_by'] = $leadsCollectionArray[$leadKey]['responsible_user'];
+
+            $responsibleUser = $users->getBy('id', $lead['created_by']);
+            if ($lead['created_by'] === 0) {
+                $leadsCollectionArray[$leadKey]['created_by'] = 'Robot';
+            } elseif (!$responsibleUser) {
+                $leadsCollectionArray[$leadKey]['created_by'] = 'Remote user';
             } else {
                 $leadsCollectionArray[$leadKey]['created_by'] = ($users->getBy('id', $lead['created_by']))->getName();
             }
@@ -104,7 +108,7 @@ class LeadController extends Controller
             echo "Создано " . self::REQUEST_COUNT * self:: LEADS_COUNT . " сделок";
         } catch (AmoCRMApiNoContentException $exception) {
         } catch (AmoCRMoAuthApiException $e) {
-            \Yii::$app->session->destroy();
+            Yii::$app->session->destroy();
             $this->redirect('/');
         } catch (AmoCRMApiException $e) {
             die('Ошибка API ' . $e->getDescription());

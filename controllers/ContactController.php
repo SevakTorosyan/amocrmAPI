@@ -93,8 +93,12 @@ class ContactController extends Controller
         foreach ($contactsCollection as $contactKey => $contact) {
             $contactsArray[] = $contact->toArray();
             $contactsArray[count($contactsArray)-1]['responsible_user'] = ($users->getBy('id', $contact->getResponsibleUserId()))->getName();
-            if ($contact->getResponsibleUserId() === $contact->getCreatedBy()) {
-                $contactsArray[count($contactsArray)-1]['created_by'] = $contactsArray[count($contactsArray)-1]['responsible_user'];
+
+            $responsibleUser = $users->getBy('id', $contact->getCreatedBy());
+            if ($contact->getCreatedBy() === 0) {
+                $contactsArray[count($contactsArray)-1]['created_by'] = 'Robot';
+            } elseif (!$responsibleUser) {
+                $contactsArray[count($contactsArray)-1]['created_by'] = 'Remote user';
             } else {
                 $contactsArray[count($contactsArray)-1]['created_by'] = ($users->getBy('id', $contact->getCreatedBy()))->getName();
             }
@@ -124,6 +128,9 @@ class ContactController extends Controller
                     $contact = new ContactModel();
                     $contact->setFirstName(Yii::$app->security->generateRandomString(10));
                     $contact->setLastName(Yii::$app->security->generateRandomString(10));
+                    if (rand(0,100) % 2 === 0) {
+                        $contact->setCreatedBy(0);
+                    }
                     $contactCollection->add($contact);
                 }
                 $contacts->add($contactCollection);
